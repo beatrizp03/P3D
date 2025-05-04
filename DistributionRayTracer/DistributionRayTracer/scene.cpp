@@ -113,8 +113,30 @@ HitRecord Sphere::hit(Ray& r)
 	HitRecord rec;
 	rec.t = FLT_MAX;
 	rec.isHit = false;
+	Vector hit_point;
 
 	//PUT HERE YOUR CODE
+	Vector OC = this->center - r.origin;
+	float b, c;
+	b = OC * r.direction;
+	c = OC * OC - (this->radius * this->radius);
+
+	if (c > 0.0) {
+		if ((b <= 0.0) || ((b * b - c) <= 0.0))
+			return rec;
+		else {
+			rec.t = b + sqrt(b * b - c);
+			hit_point = r.origin + r.direction * rec.t;
+		}
+	}
+	else {
+		rec.t = b - sqrt(b * b - c);
+		hit_point = r.origin + r.direction * rec.t;
+	}
+	Vector normal = hit_point - this->center;
+	normal = normal.normalize();
+	rec.normal = normal;
+	rec.isHit = true;
 	
 	return (rec);
 }

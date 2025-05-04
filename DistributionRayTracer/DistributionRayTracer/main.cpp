@@ -1,7 +1,7 @@
  ///////////////////////////////////////////////////////////////////////
 //
 // P3D Course
-// (c) 2025 by Jo„o Madeiras Pereira
+// (c) 2025 by Jo√£o Madeiras Pereira
 //Distribution Ray Tracing P3F scenes and drawing points with Modern OpenGL
 // It explores parallelism through OMP
 //
@@ -192,8 +192,8 @@ void createBufferObjects()
 	glGenBuffers(2, VboId);
 	glBindBuffer(GL_ARRAY_BUFFER, VboId[0]);
 
-	/* SÛ se faz a alocaÁ„o dos arrays glBufferData (NULL), e o envio dos pontos para a placa gr·fica
-	È feito na drawPoints com GlBufferSubData em tempo de execuÁ„o pois os arrays s„o GL_DYNAMIC_DRAW */
+	/* S√≥ se faz a aloca√ß√£o dos arrays glBufferData (NULL), e o envio dos pontos para a placa gr√°fica
+	√© feito na drawPoints com GlBufferSubData em tempo de execu√ß√£o pois os arrays s√£o GL_DYNAMIC_DRAW */
 	glBufferData(GL_ARRAY_BUFFER, size_vertices, NULL, GL_DYNAMIC_DRAW);
 	glEnableVertexAttribArray(VERTEX_COORD_ATTRIB);
 	glVertexAttribPointer(VERTEX_COORD_ATTRIB, 2, GL_FLOAT, 0, 0, 0);
@@ -305,6 +305,13 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		for (int i = 0; i < num_objects; i++)
 		{
 			//COMPLETE THE CODE
+			obj = scene->getObject(i);
+			auxRec = obj->hit(ray);
+			if (auxRec.isHit && (auxRec.t < closestHit.t))  {
+				hitObj = obj;
+				closestHit = auxRec;
+			}
+
 		}
 
 		if (hitObj == NULL) {  // No intersected object
@@ -339,12 +346,26 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 			return color_Acc.clamp();
 		}
 	}
-
 	hitPoint = ray.origin + ray.direction * closestHit.t;
-	N = closestHit.normal;
+	N = closestHit.normal.normalize();
 
-	//CALCULATE THE COLOR OF THE PIXEL
+	Color diff_color(0, 0, 0), spec_color(0, 0, 0);
+	Material* material = hitObj->GetMaterial();
+	Vector view_dir = ray.direction.normalize() * (-1);
 
+	for (int i = 0; i < num_lights; i++) {
+		Light* light = scene->getLight(i);
+		Vector light_dir = (light->position - hitPoint).normalize();
+		Vector h = (light_dir + view_dir).normalize();
+
+		float diff = std::max(0.0f, N * light_dir);
+		float spec = std::max(0.0f, N * h);
+
+		diff_color += material->GetDiffColor() * material->GetDiffuse() * diff;
+		spec_color += material->GetSpecColor() * material->GetSpecular() * pow(spec, material->GetShine());
+	}
+
+	color_Acc = diff_color + spec_color;
 	return color_Acc.clamp();
 }
 
