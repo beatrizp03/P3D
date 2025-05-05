@@ -357,6 +357,25 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		Light* light = scene->getLight(i);
 		Vector light_dir = (light->position - hitPoint).normalize();
 		Vector h = (light_dir + view_dir).normalize();
+		Ray shadowRay(hitPoint + N * 0.001, light_dir);
+		bool isShadow = false;
+
+		/* Determine if in shadow */
+		int num_objects = scene->getNumObjects();
+		Object* obj = NULL;
+
+		for (int i = 0; i < num_objects; i++)
+		{
+			obj = scene->getObject(i);
+			auxRec = obj->hit(shadowRay);
+			if (auxRec.isHit) {
+				isShadow = true;
+				break;
+			}
+
+		}
+		if (isShadow)
+			continue;
 
 		float diff = std::max(0.0f, N * light_dir);
 		float spec = std::max(0.0f, N * h);
