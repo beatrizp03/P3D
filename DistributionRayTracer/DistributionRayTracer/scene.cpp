@@ -113,34 +113,31 @@ HitRecord Sphere::hit(Ray& r)
 	HitRecord rec;
 	rec.t = FLT_MAX;
 	rec.isHit = false;
-	Vector hit_point;
 
-	//PUT HERE YOUR CODE
-	Vector OC = this->center - r.origin;
-	float b, c;
-	b = OC * r.direction;
-	c = OC * OC - (this->radius * this->radius);
+	Vector OC = r.origin - center;
+	float a = r.direction * r.direction;
+	float b = OC * r.direction * 2.0f;
+	float c = OC * OC - radius * radius;
 
-	if (c > 0.0) {
-		if ((b <= 0.0) || ((b * b - c) <= 0.0))
-			return rec;
-		else {
-			rec.t = b + sqrt(b * b - c);
-			hit_point = r.origin + r.direction * rec.t;
-		}
-	}
-	else {
-		rec.t = b - sqrt(b * b - c);
-		hit_point = r.origin + r.direction * rec.t;
-	}
-	Vector normal = hit_point - this->center;
-	normal = normal.normalize();
-	rec.normal = normal;
+	float discriminant = b * b - 4 * a * c;
+	if (discriminant < 0)
+		return rec;
+
+	float sqrt_disc = sqrt(discriminant);
+	float t1 = (-b - sqrt_disc) / (2.0f * a);
+	float t2 = (-b + sqrt_disc) / (2.0f * a);
+
+	float t_hit = (t1 > 0.001f) ? t1 : ((t2 > 0.001f) ? t2 : -1);
+	if (t_hit < 0)
+		return rec;
+
+	rec.t = t_hit;
+	Vector hit_point = r.origin + r.direction * rec.t;
+	rec.normal = (hit_point - center).normalize();
 	rec.isHit = true;
-	
-	return (rec);
-}
 
+	return rec;
+}
 
 AABB Sphere::GetBoundingBox() {
 	Vector a_min;
