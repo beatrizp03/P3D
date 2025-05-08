@@ -380,11 +380,58 @@ Color rayTracing(Ray ray, int depth, float ior_1, Vector lightSample)  //index o
 		float diff = std::max(0.0f, N * light_dir);
 		float spec = std::max(0.0f, N * h);
 
-		diff_color += material->GetDiffColor() * material->GetDiffuse() * diff;
-		spec_color += material->GetSpecColor() * material->GetSpecular() * pow(spec, material->GetShine());
+		//diffuse component
+		color_Acc += material->GetDiffColor() * material->GetDiffuse() * diff;
+
+		//specular component
+		color_Acc += material->GetSpecColor() * material->GetSpecular() * pow(spec, material->GetShine());
 	}
 
-	color_Acc = diff_color + spec_color;
+	if (depth >= MAX_DEPTH) {
+		return color_Acc.clamp();
+	}
+
+	if (material->GetReflection()) {
+		Vector reflect_dir = ray.direction - N * 2.0f * (ray.direction * N);
+		reflect_dir = reflect_dir.normalize();
+		Ray reflect_ray(hitPoint + N * EPSILON, reflect_dir);
+		Color reflect_color = rayTracing(reflect_ray, depth + 1, ior_1, lightSample);
+		color_Acc += reflect_color * material->GetSpecular();
+	}
+
+	if (material->GetTransmittance()) {
+		// Reflection & Refraction using Schlick's Approximation
+		if (material->GetTransmittance() > 0.0f) {
+			Vector normal = N;
+			float ior2 = material->GetRefrIndex();  // material's IOR
+			float eta = ior_1 / ior2;
+			float cosi = -(ray.direction * normal);
+			bool outside = cosi > 0.0f;
+
+			// Flip normal if ray is inside
+			if (!outside) {
+				normal = normal * (-1);
+				eta = ior2 / ior_1;
+				cosi = -(ray.direction * normal);
+			}
+
+			// Schlick's approximation
+			float R0 = powf((ior_1 - ior2) / (ior_1 + ior2), 2.0f);
+			float Kr = R0 + (1.0f - R0) * powf(1.0f - fabs(cosi), 5.0f);
+
+			// Refraction
+			float k = 1.0f - eta * eta * (1.0f - cosi * cosi);
+			if (material->GetTransmittance() > 0.0f && k >= 0.0f) {
+				Vector refract_dir = ray.direction * eta + normal * (eta * cosi - sqrtf(k));
+				refract_dir = refract_dir.normalize();
+				Ray refract_ray(hitPoint - normal * EPSILON, refract_dir);
+				Color refract_color = rayTracing(refract_ray, depth + 1, ior2, lightSample);
+				color_Acc += refract_color * (1.0f - Kr) * material->GetTransmittance();
+			}
+		}
+	
+	}
+
 	return color_Acc.clamp();
 }
 

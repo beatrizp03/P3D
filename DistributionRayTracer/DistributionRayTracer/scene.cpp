@@ -48,7 +48,7 @@ HitRecord Triangle::hit(Ray& r) {
 	HitRecord rec;
 	rec.t = FLT_MAX;  //not necessary
 	rec.isHit = false;  //not necessary
-
+		
 	/* Calculate the normal */
 	Vector normal = (points[1] - points[0]) % (points[2] - points[1]);  //cross product
 	normal.normalize();
@@ -164,11 +164,88 @@ HitRecord aaBox::hit(Ray& ray)
 	rec.t = FLT_MAX;
 	rec.isHit = false;
 
-	float t0, t1; //entering and leaving points
+	float ox = ray.origin.x, oy = ray.origin.y, oz = ray.origin.z;
+	float dx = ray.direction.x, dy = ray.direction.y, dz = ray.direction.z;
 
-	//PUT HERE YOUR CODE
-		return (rec);
-	
+	float tx_min, ty_min, tz_min;
+	float tx_max, ty_max, tz_max;
+
+	float a = 1.0f / dx;
+	if (a >= 0) {
+		tx_min = (min.x - ox) * a;
+		tx_max = (max.x - ox) * a;
+	}
+	else {
+		tx_min = (max.x - ox) * a;
+		tx_max = (min.x - ox) * a;
+	}
+
+	float b = 1.0f / dy;
+	if (b >= 0) {
+		ty_min = (min.y - oy) * b;
+		ty_max = (max.y - oy) * b;
+	}
+	else {
+		ty_min = (max.y - oy) * b;
+		ty_max = (min.y - oy) * b;
+	}
+
+	float c = 1.0f / dz;
+	if (c >= 0) {
+		tz_min = (min.z - oz) * c;
+		tz_max = (max.z - oz) * c;
+	}
+	else {
+		tz_min = (max.z - oz) * c;
+		tz_max = (min.z - oz) * c;
+	}
+
+	float tE, tL;
+	Vector face_in, face_out;
+
+	// Largest entering t
+	if (tx_min > ty_min) {
+		tE = tx_min;
+		face_in = (a >= 0) ? Vector(-1, 0, 0) : Vector(1, 0, 0);
+	}
+	else {
+		tE = ty_min;
+		face_in = (b >= 0) ? Vector(0, -1, 0) : Vector(0, 1, 0);
+	}
+
+	if (tz_min > tE) {
+		tE = tz_min;
+		face_in = (c >= 0) ? Vector(0, 0, -1) : Vector(0, 0, 1);
+	}
+
+	// Smallest exiting t
+	if (tx_max < ty_max) {
+		tL = tx_max;
+		face_out = (a >= 0) ? Vector(1, 0, 0) : Vector(-1, 0, 0);
+	}
+	else {
+		tL = ty_max;
+		face_out = (b >= 0) ? Vector(0, 1, 0) : Vector(0, -1, 0);
+	}
+
+	if (tz_max < tL) {
+		tL = tz_max;
+		face_out = (c >= 0) ? Vector(0, 0, 1) : Vector(0, 0, -1);
+	}
+
+	if (tE < tL && tL > 0.0f) {
+		rec.isHit = true;
+		if (tE > 0.0f) {
+			rec.t = tE;
+			rec.normal = face_in;
+		}
+		else {
+			rec.t = tL;
+			rec.normal = face_out;
+		}
+	}
+
+	return rec;
 }
 
 
